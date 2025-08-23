@@ -1,0 +1,58 @@
+.approvals-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.approvals-container h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.no-users-message {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.pending-users-list {
+    list-style: none;
+    padding: 0;
+}
+
+.pending-user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.pending-user-item span {
+    color: #333;
+}
+
+.approve-button {
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.approve-button:hover {
+    background-color: #45a049;
+}
+
+.error-message {
+    text-align: center;
+    color: #d32f2f;
+    margin-bottom: 20px;
+}
