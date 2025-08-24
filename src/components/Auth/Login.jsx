@@ -103,14 +103,18 @@ const Login = () => {
           );
           const { token, role, user_id, classcode, cr_type, cr_elective_id, username } = response.data;
 
+          const customTokenResponse = await axios.post(`${API_URL}/api/auth/custom-token`, { uid: user_id });
+          const customToken = customTokenResponse.data.token;
+          await signInWithCustomToken(auth, customToken); 
+
           await handleCustomTokenLogin(token);
 
-          localStorage.setItem('role', role.toUpperCase());
-          localStorage.setItem('user_id', user_id.toString());
+          localStorage.setItem('user_id', user_id?.toString() || '');
           localStorage.setItem('classcode', classcode || '');
           localStorage.setItem('cr_type', cr_type || '');
           localStorage.setItem('cr_elective_id', cr_elective_id || '');
           localStorage.setItem('user_name', username || email || 'Unknown');
+          
         } catch (error) {
           console.error('Login error:', error);
           if (error.code === 'ECONNABORTED' && attempt < maxAttempts) {
