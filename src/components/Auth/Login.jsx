@@ -84,66 +84,71 @@ const Login = () => {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return; // prevent double submit
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      const attemptRequest = async (attempt = 1, maxAttempts = 2) => {
-        try {
-          if (!email || !password) {
-            throw new Error('Email and password are required');
-          }
+  e.preventDefault();
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  setError(null);
 
-          console.log('Sending login request:', { email, attempt }); // Log request
-          const response = await axios.post(
-            `${API_URL}/api/auth/login`,
-            { email, password },
-            { timeout: 30000 } // Increase to 30 seconds
-          );
-          const { token, role, user_id, classcode, cr_type, cr_elective_id, username } = response.data;
+  try {
+    const attemptRequest = async (attempt = 1, maxAttempts = 2) => {
+      try {
+        if (!email || !password) throw new Error('Email and password are required');
 
-          const customTokenResponse = await axios.post(`${API_URL}/api/auth/custom-token`, { uid: user_id });
-          const customToken = customTokenResponse.data.token;
-          await signInWithCustomToken(auth, customToken); 
+        console.log('Sending login request:', { email, attempt });
 
-          await handleCustomTokenLogin(token);
+        // 1️⃣ Login to your backend
+        const response = await axios.post(`${API_URL}/api/auth/login`, { email, password }, { timeout: 30000 });
+        const { token, role, user_id, classcode, cr_type, cr_elective_id, username } = response.data;
 
-          localStorage.setItem('user_id', user_id?.toString() || '');
-          localStorage.setItem('classcode', classcode || '');
-          localStorage.setItem('cr_type', cr_type || '');
-          localStorage.setItem('cr_elective_id', cr_elective_id || '');
-          localStorage.setItem('user_name', username || email || 'Unknown');
-          
-        } catch (error) {
-          console.error('Login error:', error);
-          if (error.code === 'ECONNABORTED' && attempt < maxAttempts) {
-            console.warn(`Login attempt ${attempt} timed out, retrying after delay...`);
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2-second delay before retry
-            return attemptRequest(attempt + 1, maxAttempts);
-          }
-          let errorMsg = 'Login failed';
-          if (error.response) {
-            errorMsg = error.response.data.error || 'Invalid credentials';
-          } else if (error.code === 'ECONNABORTED') {
-            errorMsg = 'Server is slow or unreachable. Please try again later.';
-          } else if (error.message) {
-            errorMsg = error.message;
-          }
-          setError(errorMsg);
-          setIsLoading(false);
+        if (!user_id) throw new Error('Login failed: user ID missing from backend');
+
+        // 2️⃣ Request Firebase custom token
+        console.log('Requesting Firebase custom token for uid:', user_id);
+        const customTokenResponse = await axios.post(`${API_URL}/api/auth/custom-token`, { uid: user_id });
+        const customToken = customTokenResponse.data.token;
+
+        if (!customToken) throw new Error('Failed to get Firebase custom token');
+
+        // 3️⃣ Sign in to Firebase
+        await signInWithCustomToken(auth, customToken);
+        console.log('Firebase login successful');
+
+        // 4️⃣ Save user info safely
+        localStorage.setItem('role', role ? role.toUpperCase() : '');
+        localStorage.setItem('user_id', user_id?.toString() || '');
+        localStorage.setItem('classcode', classcode || '');
+        localStorage.setItem('cr_type', cr_type || '');
+        localStorage.setItem('cr_elective_id', cr_elective_id || '');
+        localStorage.setItem('user_name', username || email || 'Unknown');
+
+      } catch (error) {
+        console.error('Login error:', error);
+
+        // Retry logic for timeouts
+        if (error.code === 'ECONNABORTED' && attempt < maxAttempts) {
+          console.warn(`Login attempt ${attempt} timed out, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return attemptRequest(attempt + 1, maxAttempts);
         }
-      };
 
-      attemptRequest();
-    } catch (err) {
-      console.error('Login error: ', err);
-      // Prefer backend message when available
-      setError(err?.response?.data?.message || 'Login failed. Try again later.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        let errorMsg = 'Login failed';
+        if (error.response) errorMsg = error.response.data.error || 'Invalid credentials';
+        else if (error.message) errorMsg = error.message;
+
+        setError(errorMsg);
+        setIsLoading(false);
+      }
+    };
+
+    await attemptRequest();
+  } catch (err) {
+    console.error('Unexpected login error:', err);
+    setError(err?.response?.data?.message || 'Login failed. Try again later.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
